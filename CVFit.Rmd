@@ -1,0 +1,382 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Cyclic voltammetry simulation and fitting algorithm
+
+Derived from Peter Attia's MatLab code: https://petermattia.com/cyclic_voltammetry_simulation/simulation.html
+update from September 20, 2020
+
+Changes:
+*Adapted from MatLab to R
+*Runs the CV for 3 cycles to more closely resemble experimental conditions (using the 3rd cycle)
+*Use of the simulation as an objective function to fit to experimental data
+*Separate diffusion coefficients for oxidized and reduced species. Holding the spatial discretization step constant.
+
+--------------- Installation setup ---------------
+You only need to run this section once to download the packages. After that, you can comment it out with # symbols.
+
+```{r}
+# Installing packages - you only need to do this once
+#install.packages("dplyr") # Data frame processing
+#install.packages("ggplot2") # Plotting
+#install.packages("GA") # Genetic algorithm optimization
+#install.packages("parallel") # Paralell processing
+```
+
+--------------- Code setup ---------------
+Clears the workspace so there aren't any floating variables. Loads the necessary packages.
+
+I have found that sometimes RStudio crashes if I load packages from here. It runs properly if you copy the lines with library() and run them in the console directly instead.
+
+```{r}
+# Clear workspace and setup necessary libraries
+
+# Last update:
+date()
+
+# Clear work space
+rm(list = ls())
+
+library(dplyr) # Data frame processing
+library(patchwork) # Subplotting
+library(GA) # Genetic algorithm optimization
+library(parallel) # Paralell processing
+library(ggplot2)
+
+```
+
+------------------------- Load Data -------------------------
+You need to convert the excel sheet to a .csv file to be able to load it into R (there is a way to get it to read excel sheets, but it doesn't always work). It should be in the same format as the one you gave me, i.e. with the first column as the voltage, the second as the background, third as the raw data, and fourth as the background-subtracted data, repeating samples as needed. All CVs in the sheet should be the same solution, but can be different scan rates.
+
+When changing the data you are fitting to, you only need to change the file name and the concentration. Using the full file name (~/.../path/.../filename.csv) will always work, but if you have this code saved in the same folder as your data, you can just use the file name (filename.csv).
+
+```{r}
+# Concentration of redox species
+concentration = 1e-3 # mol/L
+
+# Load data
+file = "TEMPO_1mM_20wtNaPTS.csv"
+CV.data = read.csv(file, header = TRUE)
+# Filter down to only the background-subtracted data: first column is the potential; every 3rd is the background subtracted current
+CV.data = CV.data[,seq(from = 1, to = length(names(CV.data)), by = 3)]
+# Extract the scan rates from the header names; units of mV/s
+scanrate = unlist(strsplit(names(CV.data), "mvs"))[c(FALSE, TRUE)]
+scanrate = as.numeric(unlist(strsplit(scanrate, "X"))[c(FALSE, TRUE)])*1e-3
+
+# Combine all scans into a single column vector. For each scan rate, calculate the regression weighting factor (numerical 2nd derivative)
+data = data.frame()
+for(i in 1:length(scanrate)){
+  # Temporary variable to calculate the 2nd derivative in
+  temp = data.frame(voltage = CV.data$E, current = CV.data[,i+1], scanrate = scanrate[i])
+  # Use a moving polynomial fit of 15 point window; end points are the same as the first point
+  len = length(temp$current); der2 = rep(NA, 7)
+  for(n in 7:(len-6)){
+    fit = lm(current ~ I(voltage^2) + I(voltage), data = temp[c((n-7):(n+7)),])
+    der2[n] = unname(fit$coefficients[2])
+  }
+  # Fill end points with neighbor points
+  der2[1:7] = der2[7]
+  der2[length(der2):len] = der2[length(der2)]
+  # Find points where the scan rate flips; replace those as well with neighbor points
+  temp$dir = sign(c(temp$voltage[2] -   temp$voltage[1], temp$voltage[2:nrow(temp)] -   temp$voltage[1:(nrow(temp)-1)]))
+  pos = which(temp$dir != temp$dir[1])
+  der2[(min(pos)-7):(min(pos)-1)] = der2[(min(pos)-8)]
+  der2[min(pos):(min(pos)+6)] = der2[min(pos)+7]
+  
+  temp$weight1 = abs(der2)/max(abs(der2)) # Normalize and absolute value - equally weight concave up/down; de-emphasize flatter regions
+  temp$weight2 = 1/max(abs(temp$current)) # Additional weighting factor by the inverse of the current - so different scan rates are equally emphasized
+  
+  data = rbind(data, temp)
+}
+CV.data = data
+# Normalize the secondary weight
+CV.data$weight2 = CV.data$weight2/max(CV.data$weight2)
+# Convert units: current needs to be mA/cm2. Assuming a 3mm diameter disc electrode
+CV.data$current = CV.data$current*1e3/(pi*(0.3)^2/4)
+
+# Check that the CVs are all collected properly
+ggplot(CV.data) +
+  geom_path(mapping = aes(x = voltage, y = current, color = "unweight"), linetype = 1) +
+  geom_path(mapping = aes(x = voltage, y = weight1*current, color = "weight"), linetype = 2) +
+  facet_wrap(~scanrate, scale = "free_y") + 
+  scale_color_manual(labels = c("unweight" = "Current", "weight" = "Weighted Current"), name = "", 
+                     values = c("unweight" = "black", "weight" = "red"), breaks = c("unweight", "weight")) +
+  labs(x = "Potential (V vs ref)", color = "") +
+  theme_bw() + theme(legend.position = c(0.85, 0.2))
+rm(file, data, temp, der2, fit, i, n, len, scanrate)
+
+# Trim the data for fitting
+CV.data.trim = CV.data[c(TRUE, rep(FALSE, 2)), ] # Every 3rd point
+
+```
+
+------------------------- Simulation function -------------------------
+This creates the function that runs the simulations, and outputs an example to show that it works.
+
+```{r}
+# Functional form of the simulation with identical spatial resolution
+CV.simulation = function(DR, DO, alpha, k0, E0, C, voltage.range, v){
+  # Default Fitting variables
+  # DR     = 1E-5;   # [=] cm^2/s, R diffusion coefficient. Default = 1E-5
+  # DO     = 1E-5;   # [=] cm^2/s, O diffusion coefficient. Default = 1E-5
+  # alpha  = 0.5;    # [=] dimensionless charge-transfer coefficient. Default = 0.5
+  # k0     = 1E-2;   # [=] cm/s, electrochemical rate constant. Default = 1E-2
+  # E0     = 0       # [=] V, standard reduction potential
+  # voltage.range    # [=] V, voltages measured
+  
+  # Experimental conditions
+  # C      = 1.0;         # [=] mol/L, initial concentration of O. Default = 1.0
+  C      = C / 1000;    # Convert C from mol/L to mol/cm3
+  # v      = 1E-3;        # [=] V/s, sweep rate. Default = 1E-3
+  n      = 1.0;         # [=] number of electrons transfered. Default = 1
+  T      = 298.15;      # [=] K, temperature. Default = 298.15
+  
+  # Physical constants
+  F      = 96485;   # [=] C/mol, Faraday's constant
+  R      = 8.3145;  # [=] J/mol-K, ideal gas constant
+  f      = F/(R*T); # [=] 1/V, normalized Faraday's constant at room temperature
+  
+  # Simlation variables
+  L      = length(voltage.range);    # [=] number of iterations per t_k (pg 790). Default = 500
+  DMr     = 0.45;   # [=] model diffusion coefficient (pg 788). Default = 0.45
+  DMo     = DMr*DO/DR;   # [=] model diffusion coefficient (pg 788). Default = 0.45
+  if(DMo > 0.45){
+    DMo = 0.45
+    DMr = DMo*DR/DO
+  }
+  
+  # Derived variables
+  Dt  = c(0, abs(voltage.range[2:L] - voltage.range[1:(L-1)])/v ) # Time change from previous point
+  # Issues with Dt = 0; replace with the nearest nonzero value
+  while(length(which(Dt == 0)) > 0){
+    pos = which(Dt == 0)
+    Dt[pos] = Dt[pos+1]
+  }
+  DRx = sqrt(DR*Dt/DMr);     # [=] cm, delta x (Eqn B.1.13, pg 791)
+  DOx = sqrt(DO*Dt/DMo);     # [=] cm, delta x (Eqn B.1.13, pg 791)
+  j   = ceiling(4.2*L^0.5)+5;  # number of boxes (pg 792-793). If L~200, j=65
+  
+  # Initial setup
+  # k = 0:L;                # time index vector
+  eta = voltage.range - E0; # overpotential scan, both directions
+  Enorm = eta*f;          # normalized overpotential
+  kf = k0*exp(  -alpha *n*Enorm); # [=] cm/s, fwd rate constant (pg 799)
+  kb = k0*exp((1-alpha)*n*Enorm); # [=] cm/s, rev rate constant (pg 799)
+  
+  # Concentration matrices
+  if(voltage.range[1] < voltage.range[2]){ # If initial scan is negative, then starting with only oxidized species
+    O = matrix(rep(0, (L+1)*j), nrow = L+1) # [=] mol/cm^3, concentration of O
+    R = matrix(rep(C, (L+1)*j), nrow = L+1)  # [=] mol/cm^3, concentration of R
+    J0 = rep(0, L+1) # [=] mol/cm^2-s, flux of O at the surface
+  } else{ # Starting reduced if the opposite is true
+    O = matrix(rep(C, (L+1)*j), nrow = L+1) # [=] mol/cm^3, concentration of O
+    R = matrix(rep(0, (L+1)*j), nrow = L+1)  # [=] mol/cm^3, concentration of R
+    J0 = rep(0, L+1) # [=] mol/cm^2-s, flux of O at the surface
+  }
+  
+  # Simulation loop: 3 cycles
+  for(loop in 1:3){
+    for(i1 in 1:L){ # Time index
+      # Update bulk concentrations of O and R
+      for(i2 in 2:(j-1)){ # Space index
+        O[i1+1, i2] = O[i1, i2] + DMo*(O[i1, i2+1] + O[i1, i2-1] - 2*O[i1, i2]) # Discretized diffusion
+        R[i1+1, i2] = R[i1, i2] + DMr*(R[i1, i2+1] + R[i1, i2-1] - 2*R[i1, i2])
+      }
+      
+      # Update flux at the surface based on reaction kinetics
+      # J0[i1+1] = ( kf[i1+1]*O[i1+1, 2] ) / (1 + DOx[i1]/DO * (kf[i1+1] + kb[i1+1])) - kb[i1+1]*R[i1+1,2] / (1 + DRx[i1]/DR * (kf[i1+1] + kb[i1+1]))
+      J0[i1+1] = ( kf[i1+1]*O[i1+1, 2]  - kb[i1+1]*R[i1+1,2]) / (1 + DRx[i1]/DR * kb[i1+1] + DOx[i1]/DO * kf[i1+1] )
+      
+      # Update surface concentrations
+      O[i1+1, 1] = O[i1+1, 2] - J0[i1+1]*(DOx[i1]/DO)
+      R[i1+1, 1] = R[i1+1, 2] + J0[i1+1]*(DRx[i1]/DR)
+    }
+    # Save the current output
+    # Z[,loop]  = -n*F*J0 * 1000; # [=] A/cm^2 -> mA/cm^2, current density
+    # Final time point is the first of the next cycle
+    # O[1,] = O[L,]; R[1,] = R[L,]; J0[1] = J0[L]
+  }
+  
+  # Only interested in the current for the 3rd cycle
+  Z  = -n*F*J0 * 1000; # [=] A/cm^2 -> mA/cm^2, current density
+  # Some issues with lengths not lining up due to discretization
+  while(length(eta) > length(Z)){
+    eta = eta[1:(length(eta)-1)];
+  }
+  while(length(Z) > length(eta)){
+    Z = Z[1:(length(Z)-1)];
+  }
+  CV.sim = data.frame(voltage = eta + E0, current = Z, scanrate = v)
+}
+
+test = rbind(CV.simulation(DR = 1e-5, DO = 1e-5, alpha = 0.35, k0 = 0.01, E0 = 0.35, C = 1, 
+                           voltage.range = c(seq(from = 0, to = 0.7, by = 0.01), seq(from = 0.7, to = 0, by = -0.01)), v = 0.001), 
+             CV.simulation(DR = 1e-5, DO = 1e-5, alpha = 0.35, k0 = 0.01, E0 = 0.35, C = 1, 
+                           voltage.range = c(seq(from = 0, to = 0.7, by = 0.01), seq(from = 0.7, to = 0, by = -0.01)), v = 0.01))
+ggplot(test) +
+  geom_path(mapping = aes(x = voltage, y = current, color = as.factor(scanrate*1e3))) +
+  labs(x = "Potential vs ref", y = "Current density (mA/cm2)", color = "Scan rate (mV/s)") + theme(legend.position = c(0.1, 0.85))
+
+test = CV.simulation(DR = 1e-5, DO = 1e-5, alpha = 0.35, k0 = 0.01, E0 = 0.35, C = 1, 
+                           voltage.range = c(seq(from = 0, to = 0.7, by = 0.01), seq(from = 0.7, to = 0, by = -0.01)), v = 0.01)
+test$DO = 1e-5
+tes2 = CV.simulation(DR = 1e-5, DO = 1e-7, alpha = 0.35, k0 = 0.01, E0 = 0.35, C = 1, 
+                           voltage.range = c(seq(from = 0, to = 0.7, by = 0.01), seq(from = 0.7, to = 0, by = -0.01)), v = 0.01)
+tes2$DO = 1e-7
+test = rbind(test, tes2); rm(tes2)
+tes2 = CV.simulation(DR = 1e-5, DO = 1e-3, alpha = 0.35, k0 = 0.01, E0 = 0.35, C = 1, 
+                           voltage.range = c(seq(from = 0, to = 0.7, by = 0.01), seq(from = 0.7, to = 0, by = -0.01)), v = 0.01)
+tes2$DO = 1e-3
+test = rbind(test, tes2); rm(tes2)
+
+g1 = ggplot(test) +
+  geom_path(mapping = aes(x = voltage, y = current, color = as.factor(log10(DO)))) +
+  labs(x = "Potential vs ref", y = "Current density (mA/cm2)", color = expression("log10 D"[o]), subtitle = expression("log10 D"[r]*" = -5")) + theme(legend.position = c(0.1, 0.85))
+# g1
+test = CV.simulation(DR = 1e-5, DO = 1e-5, alpha = 0.35, k0 = 0.01, E0 = 0.35, C = 1, 
+                           voltage.range = c(seq(from = 0, to = 0.7, by = 0.01), seq(from = 0.7, to = 0, by = -0.01)), v = 0.01)
+test$DR = 1e-5
+tes2 = CV.simulation(DR = 1e-7, DO = 1e-5, alpha = 0.35, k0 = 0.01, E0 = 0.35, C = 1, 
+                           voltage.range = c(seq(from = 0, to = 0.7, by = 0.01), seq(from = 0.7, to = 0, by = -0.01)), v = 0.01)
+tes2$DR = 1e-7
+test = rbind(test, tes2); rm(tes2)
+tes2 = CV.simulation(DR = 1e-3, DO = 1e-5, alpha = 0.35, k0 = 0.01, E0 = 0.35, C = 1, 
+                           voltage.range = c(seq(from = 0, to = 0.7, by = 0.01), seq(from = 0.7, to = 0, by = -0.01)), v = 0.01)
+tes2$DR = 1e-3
+test = rbind(test, tes2); rm(tes2)
+
+g2 = ggplot(test) +
+  geom_path(mapping = aes(x = voltage, y = current, color = as.factor(log10(DR)))) +
+  labs(x = "Potential vs ref", y = "Current density (mA/cm2)", color = expression("log10 D"[r]), subtitle = expression("log10 D"[o]*" = -5")) + theme(legend.position = c(0.1, 0.85))
+(g1 + theme(legend.position = c(0.1, 0.5)) + labs(title = "Constant step size")) / g2 + theme(legend.position = c(0.1, 0.5))
+
+```
+
+------------------------- Fitting function -------------------------
+Create the function that simulates the same conditions as the CV experiment (i.e. same voltage points as the data) with a guess for the variables of interest.
+DR : Diffusion coefficient of the reduced species (cm2/s)
+DO : Diffusion coefficient of the oxidized species (cm2/s)
+alpha : charge transfer coefficient (unitless)
+k0 : electrochemical rate constant (cm/s)
+E0 : standard reduction potential (V vs reference)
+
+DR, DO, and k0 are in log10 units (better accuracy for fitting later)
+
+Section will output a CV with an estimated guess of the parameters and plot compared to the data.
+```{r}
+# Set up the function for the regression analysis
+CV.fit.function = function(voltage, scanrate, logDR, logDO, alpha, logk0, E0, C){
+  # Input of the data point voltages, scan rates, and known concentration
+  # Initial guesses for the DR, DO, alpha, k0, and E0
+  # DR, DO, and k0 are log units for ease of convergence
+  DR = 10^logDR; DO = 10^logDO; k0 = 10^logk0
+  # Will output the predicted current
+  current.out = c()
+  # For each unique scan rate, run the simulation separately
+  for(v in unique(scanrate)){
+    # Extract the voltage from that scan rate
+    volt.range = voltage[scanrate == v]
+    # Run the simulation
+    CV.sim = CV.simulation(DR = DR, DO = DO, alpha = alpha, k0 = k0, E0 = E0, C = C, voltage.range = volt.range, v = v)
+    # Combine and save
+    current.out = c(current.out, CV.sim$current)
+  }
+
+  return(current.out)
+}
+
+# Initial guesses for the fitting variables
+DR.guess = 1e-6 # cm2/s
+DO.guess = 1e-6 # cm2/s
+alpha.guess = 0.5
+k0.guess = 1e-2 # cm/s
+E0.guess = 0.6
+# voltage = CV.data$voltage
+scanrate = CV.data$scanrate
+
+test.data = filter(CV.data.trim, scanrate == unique(scanrate)[1] | scanrate == unique(scanrate)[5])
+
+test.current = CV.fit.function(voltage = test.data$voltage, scanrate = test.data$scanrate,
+                               logDR = log10(DR.guess), logDO = log10(DO.guess), alpha = alpha.guess, logk0 = log10(k0.guess), E0 = E0.guess, 
+                               C = concentration)
+
+# Check that CVs came out similar to the results
+ggplot(data.frame(volt = test.data$voltage, meas = test.data$current, sim = test.current)) +
+  geom_path(mapping = aes(x = volt, y = meas), color = "black") +
+  geom_path(mapping = aes(x = volt, y = sim), color = "red") +
+  geom_point(mapping = aes(x = volt, y = sim), color = "red")
+
+
+```
+
+------------------------- Fitting: Weighted Sum of Squares Regression -------------------------
+Sum of squares regression, weighted by the absolute value of the local 2nd derivative of the data. Using a genetic algorithm with a population of 50, up to 50 generations. Convergence happens when the best-case scenario does not change for 10 generations.
+
+Each variable has its own lower and upper bounds that can be tuned based on what you predict. Tuning these ranges can improve the speed (making it narrower around your guess), but doing so can result in overfitting.
+
+When changing the ranges, remember that DR, DO, and k0 are given as their log10.
+
+I have the fitting function set to use parallel processing (parallel = 2) to speed it up, but you can change that to 1 core (parallel = FALSE) if you need to run other things with your computer while it runs in the background. If it doesn't converge (takes the full 50 generations), it will take ~15 inutes with 2 cores.
+
+The function will output every generation's mean and best because I have monitor = TRUE. I find this helpful to track that it is actually running.
+
+```{r}
+# Try genetic algorithm with test data, timing it to see how long it takes
+#install.packages("doParallel")
+library(doParallel)    
+system.time({
+  mod.GA <- ga(type = "real-valued",
+               # Fitness function: weighted sum of squares of error
+               fitness =  function(var){-sum((CV.data.trim$current - (CV.fit.function(voltage = CV.data.trim$voltage, scanrate = CV.data.trim$scanrate, 
+                                  # Fit variables and concentration C
+                                  logDR = var[1], logDO = var[2], alpha = var[3], logk0 = var[4], E0 = var[5], C = concentration)))^2*
+                                  CV.data.trim$weight1*CV.data.trim$weight2)},
+               # Bounds for each of the varaibles
+               lower = c(-6, -6, 0.45, -1, 0.55), upper = c(-5, -5, 0.55, 1, 0.65), 
+               # Genetic algorithm parameters: population, iteration, and run size (how guesses per group, how many groups)
+               # will output up to <maxiter> times, but will stop early if the best fit stays the same for <run> iterations
+               popSize = 200, maxiter = 200, run = 10, monitor = TRUE,
+               # Parallel computing with 2 cores - speeds up calculation time
+               parallel = 2)
+})
+summary(mod.GA)
+
+```
+------------------------- Fitting: Results -------------------------
+Output of the fit. The fitted variables use the best fitting guess from the genetic algorithm's last population. The approximate error is the standard deviation of that population's top 50% (taking 50% because the randomness of population generation sometimes creates significant outliers that don't affect convergence behavior but would affect the standard deviation).
+
+The "fit" variable is the weighted regression parameter.
+
+With the exception of k0, all values should have an error of less than 10%. Large perturbations in k0 have a small impact on the fit quality, so errors are expected to be large.
+
+```{r}
+# Compare fit to the data
+solution = data.frame(DR = 10^mod.GA@population[,1], DO = 10^mod.GA@population[,2], alpha = mod.GA@population[,3],
+                      k0 = 10^mod.GA@population[,4], E0 = mod.GA@population[,5], fit = mod.GA@fitness) 
+# Take only the best 50% from the final population pool for the error estimate
+fit.cut = median(mod.GA@fitness)
+solution = filter(solution, abs(fit) < abs(fit.cut))
+
+print("Best Fit")
+apply(filter(solution, fit == max(fit)), 2, mean) # Best fit solution
+print("Estimated Error")
+apply(solution, 2, sd) # Standard deviation of the best 50% of the population
+
+```
+
+```{r}
+# Plotting the fit
+test.current = CV.fit.function(voltage = CV.data$voltage, scanrate = CV.data$scanrate,
+                               logDR = mod.GA@solution[1], logDO = mod.GA@solution[2], alpha = mod.GA@solution[3], 
+                               logk0 = mod.GA@solution[4], E0 = mod.GA@solution[5], C = concentration)
+CV.data$sim = test.current
+ggplot(CV.data) +
+  geom_path(mapping = aes(x = voltage, y = sim, group = scanrate*1e3, color = as.factor(scanrate), linetype = "fit")) +
+  geom_path(mapping = aes(x = voltage, y = current, group = scanrate*1e3, color = as.factor(scanrate), linetype = "data")) +
+  labs(x = "Potential vs ref", y = "Current (mA/cm2)", color = "Scan rate\n(mV/s)") +
+  theme_bw() + scale_linetype_manual(label = c("Fit", "Data"), values = c("fit" = 1, "data" = 2), name = "")
+
+```
+
