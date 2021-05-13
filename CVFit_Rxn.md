@@ -9,7 +9,8 @@ CV for 3 cycles to more closely resemble experimental conditions. Fits
 to the 3rd cycle \* Use of the simulation as an objective function to
 fit to experimental data \* Separate diffusion coefficients for oxidized
 and reduced species. Holding the spatial discretization step constant.
-\* Includes reaction for decomposition of oxidized species
+\* Includes reaction for decomposition of oxidized species. If no
+reaction is desired, the reaction rate can be set to 0.
 
 # Installation setup
 
@@ -40,7 +41,7 @@ in the console directly instead.
 date()
 ```
 
-    ## [1] "Thu May 13 10:05:42 2021"
+    ## [1] "Thu May 13 10:28:59 2021"
 
 ``` r
 # Clear work space
@@ -393,57 +394,33 @@ system.time({
 })
 ```
 
-    ## GA | iter = 1 | Mean = -0.12340725 | Best = -0.01904161
-    ## GA | iter = 2 | Mean = -0.07768364 | Best = -0.01759614
-    ## GA | iter = 3 | Mean = -0.03797852 | Best = -0.01501607
-    ## GA | iter = 4 | Mean = -0.02641672 | Best = -0.01344291
-    ## GA | iter = 5 | Mean = -0.01924961 | Best = -0.01344291
-    ## GA | iter = 6 | Mean = -0.02064717 | Best = -0.01344291
-    ## GA | iter = 7 | Mean = -0.01562762 | Best = -0.01344291
-    ## GA | iter = 8 | Mean = -0.02011843 | Best = -0.01332429
-    ## GA | iter = 9 | Mean = -0.01868466 | Best = -0.01332429
-    ## GA | iter = 10 | Mean = -0.01657215 | Best = -0.01332429
-    ## GA | iter = 11 | Mean = -0.01751797 | Best = -0.01332429
-    ## GA | iter = 12 | Mean = -0.01668152 | Best = -0.01325932
-    ## GA | iter = 13 | Mean = -0.01477796 | Best = -0.01325932
-    ## GA | iter = 14 | Mean = -0.01905906 | Best = -0.01325932
-    ## GA | iter = 15 | Mean = -0.01449040 | Best = -0.01325932
-    ## GA | iter = 16 | Mean = -0.01506498 | Best = -0.01325932
-    ## GA | iter = 17 | Mean = -0.01356539 | Best = -0.01325932
-    ## GA | iter = 18 | Mean = -0.01406189 | Best = -0.01323459
-    ## GA | iter = 19 | Mean = -0.01523406 | Best = -0.01323446
-    ## GA | iter = 20 | Mean = -0.01378641 | Best = -0.01323446
-    ## GA | iter = 21 | Mean = -0.01485041 | Best = -0.01323097
-    ## GA | iter = 22 | Mean = -0.01469119 | Best = -0.01323097
-    ## GA | iter = 23 | Mean = -0.01412979 | Best = -0.01323097
-    ## GA | iter = 24 | Mean = -0.01376463 | Best = -0.01323097
-    ## GA | iter = 25 | Mean = -0.01428935 | Best = -0.01323072
-    ## GA | iter = 26 | Mean = -0.01743486 | Best = -0.01320914
-    ## GA | iter = 27 | Mean = -0.01549421 | Best = -0.01320914
-    ## GA | iter = 28 | Mean = -0.01536908 | Best = -0.01320914
-    ## GA | iter = 29 | Mean = -0.01949180 | Best = -0.01320914
-    ## GA | iter = 30 | Mean = -0.01752192 | Best = -0.01320821
-    ## GA | iter = 31 | Mean = -0.01612805 | Best = -0.01320821
-    ## GA | iter = 32 | Mean = -0.01829295 | Best = -0.01320821
-    ## GA | iter = 33 | Mean = -0.01368944 | Best = -0.01320821
-    ## GA | iter = 34 | Mean = -0.01623882 | Best = -0.01320821
-    ## GA | iter = 35 | Mean = -0.01404138 | Best = -0.01320821
-    ## GA | iter = 36 | Mean = -0.02984594 | Best = -0.01320821
-    ## GA | iter = 37 | Mean = -0.01889791 | Best = -0.01320715
-    ## GA | iter = 38 | Mean = -0.01708232 | Best = -0.01320715
-    ## GA | iter = 39 | Mean = -0.01599713 | Best = -0.01320394
-    ## GA | iter = 40 | Mean = -0.01635308 | Best = -0.01320394
-    ## GA | iter = 41 | Mean = -0.02202634 | Best = -0.01320394
-    ## GA | iter = 42 | Mean = -0.01501101 | Best = -0.01320394
-    ## GA | iter = 43 | Mean = -0.01578454 | Best = -0.01320394
-    ## GA | iter = 44 | Mean = -0.01485884 | Best = -0.01320394
-    ## GA | iter = 45 | Mean = -0.01522193 | Best = -0.01320394
-    ## GA | iter = 46 | Mean = -0.01439782 | Best = -0.01320394
-    ## GA | iter = 47 | Mean = -0.01454403 | Best = -0.01320394
-    ## GA | iter = 48 | Mean = -0.01685350 | Best = -0.01320394
+    ## GA | iter = 1 | Mean = -0.14257169 | Best = -0.02075882
+    ## GA | iter = 2 | Mean = -0.06754095 | Best = -0.01533647
+    ## GA | iter = 3 | Mean = -0.04830569 | Best = -0.01451831
+    ## GA | iter = 4 | Mean = -0.03436986 | Best = -0.01365456
+    ## GA | iter = 5 | Mean = -0.03058927 | Best = -0.01361895
+    ## GA | iter = 6 | Mean = -0.02201233 | Best = -0.01361895
+    ## GA | iter = 7 | Mean = -0.02706187 | Best = -0.01352988
+    ## GA | iter = 8 | Mean = -0.02307363 | Best = -0.01352988
+    ## GA | iter = 9 | Mean = -0.01888855 | Best = -0.01352988
+    ## GA | iter = 10 | Mean = -0.01606391 | Best = -0.01332995
+    ## GA | iter = 11 | Mean = -0.02548218 | Best = -0.01332995
+    ## GA | iter = 12 | Mean = -0.01691390 | Best = -0.01332995
+    ## GA | iter = 13 | Mean = -0.01710810 | Best = -0.01332995
+    ## GA | iter = 14 | Mean = -0.01780884 | Best = -0.01332995
+    ## GA | iter = 15 | Mean = -0.01722064 | Best = -0.01323111
+    ## GA | iter = 16 | Mean = -0.01471621 | Best = -0.01323111
+    ## GA | iter = 17 | Mean = -0.01646495 | Best = -0.01323111
+    ## GA | iter = 18 | Mean = -0.01825821 | Best = -0.01323111
+    ## GA | iter = 19 | Mean = -0.01973197 | Best = -0.01323111
+    ## GA | iter = 20 | Mean = -0.01994775 | Best = -0.01323111
+    ## GA | iter = 21 | Mean = -0.01620349 | Best = -0.01323111
+    ## GA | iter = 22 | Mean = -0.01792854 | Best = -0.01323111
+    ## GA | iter = 23 | Mean = -0.01941073 | Best = -0.01323111
+    ## GA | iter = 24 | Mean = -0.01763473 | Best = -0.01323111
 
     ##    user  system elapsed 
-    ##   1.303   0.185 555.403
+    ##   0.699   0.087 276.075
 
 ``` r
 summary(mod.GA)
@@ -464,11 +441,11 @@ summary(mod.GA)
     ## upper -5 -5 0.55  1 0.65 -1
     ## 
     ## GA results: 
-    ## Iterations             = 48 
-    ## Fitness function value = -0.01320394 
+    ## Iterations             = 24 
+    ## Fitness function value = -0.01323111 
     ## Solution = 
     ##             x1        x2        x3        x4        x5        x6
-    ## [1,] -5.370659 -5.331693 0.5154035 0.8261406 0.5962931 -5.900174
+    ## [1,] -5.375672 -5.368741 0.4805592 0.2457913 0.5950033 -6.048048
 
 # Fitting: Results
 
@@ -506,9 +483,9 @@ apply(filter(solution, fit == max(fit)), 2, mean) # Best fit solution
 ```
 
     ##            DR            DO         alpha            k0            E0 
-    ##  4.259329e-06  4.659157e-06  5.154035e-01  6.701015e+00  5.962931e-01 
+    ##  4.210441e-06  4.278184e-06  4.805592e-01  1.761130e+00  5.950033e-01 
     ##            km           fit 
-    ##  1.258421e-06 -1.320394e-02
+    ##  8.952666e-07 -1.323111e-02
 
 ``` r
 print("Estimated Error")
@@ -521,9 +498,9 @@ apply(solution, 2, sd) # Standard deviation of the best 50% of the population
 ```
 
     ##           DR           DO        alpha           k0           E0           km 
-    ## 2.344600e-08 8.672572e-08 1.302503e-02 1.506713e+00 1.895749e-04 3.580219e-07 
+    ## 6.455676e-08 3.136852e-07 4.558432e-03 2.827501e-01 1.315650e-03 1.426883e-07 
     ##          fit 
-    ## 1.438177e-05
+    ## 3.104731e-04
 
 # Plotting
 

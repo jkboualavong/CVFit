@@ -1,5 +1,5 @@
 ---
-title: "Cyclic Voltammetry Fitting"
+title: "Cyclic Voltammetry Fitting: with reaction"
 author: "Jonathan Boualavong"
 output:   
   md_document:
@@ -16,7 +16,7 @@ Changes from the original code:
 * Runs the CV for 3 cycles to more closely resemble experimental conditions. Fits to the 3rd cycle
 * Use of the simulation as an objective function to fit to experimental data
 * Separate diffusion coefficients for oxidized and reduced species. Holding the spatial discretization step constant.
-* Includes reaction for decomposition of oxidized species
+* Includes reaction for decomposition of oxidized species. If no reaction is desired, the reaction rate can be set to 0.
 
 # Installation setup 
 You only need to run this section once to download the packages. After that, you can comment it out with # symbols.
