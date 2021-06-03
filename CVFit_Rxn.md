@@ -10,7 +10,9 @@ to the 3rd cycle \* Use of the simulation as an objective function to
 fit to experimental data \* Separate diffusion coefficients for oxidized
 and reduced species. Holding the spatial discretization step constant.
 \* Includes reaction for decomposition of oxidized species. If no
-reaction is desired, the reaction rate can be set to 0.
+reaction is desired, the reaction rate can be set to 0. \* Uncertainty
+estimation by jackknife, assuming CVs at different scan rates can be
+treated independently.
 
 # Installation setup
 
@@ -41,7 +43,7 @@ in the console directly instead.
 date()
 ```
 
-    ## [1] "Thu May 13 10:28:59 2021"
+    ## [1] "Thu Jun  3 10:29:17 2021"
 
 ``` r
 # Clear work space
@@ -394,33 +396,50 @@ system.time({
 })
 ```
 
-    ## GA | iter = 1 | Mean = -0.14257169 | Best = -0.02075882
-    ## GA | iter = 2 | Mean = -0.06754095 | Best = -0.01533647
-    ## GA | iter = 3 | Mean = -0.04830569 | Best = -0.01451831
-    ## GA | iter = 4 | Mean = -0.03436986 | Best = -0.01365456
-    ## GA | iter = 5 | Mean = -0.03058927 | Best = -0.01361895
-    ## GA | iter = 6 | Mean = -0.02201233 | Best = -0.01361895
-    ## GA | iter = 7 | Mean = -0.02706187 | Best = -0.01352988
-    ## GA | iter = 8 | Mean = -0.02307363 | Best = -0.01352988
-    ## GA | iter = 9 | Mean = -0.01888855 | Best = -0.01352988
-    ## GA | iter = 10 | Mean = -0.01606391 | Best = -0.01332995
-    ## GA | iter = 11 | Mean = -0.02548218 | Best = -0.01332995
-    ## GA | iter = 12 | Mean = -0.01691390 | Best = -0.01332995
-    ## GA | iter = 13 | Mean = -0.01710810 | Best = -0.01332995
-    ## GA | iter = 14 | Mean = -0.01780884 | Best = -0.01332995
-    ## GA | iter = 15 | Mean = -0.01722064 | Best = -0.01323111
-    ## GA | iter = 16 | Mean = -0.01471621 | Best = -0.01323111
-    ## GA | iter = 17 | Mean = -0.01646495 | Best = -0.01323111
-    ## GA | iter = 18 | Mean = -0.01825821 | Best = -0.01323111
-    ## GA | iter = 19 | Mean = -0.01973197 | Best = -0.01323111
-    ## GA | iter = 20 | Mean = -0.01994775 | Best = -0.01323111
-    ## GA | iter = 21 | Mean = -0.01620349 | Best = -0.01323111
-    ## GA | iter = 22 | Mean = -0.01792854 | Best = -0.01323111
-    ## GA | iter = 23 | Mean = -0.01941073 | Best = -0.01323111
-    ## GA | iter = 24 | Mean = -0.01763473 | Best = -0.01323111
+    ## GA | iter = 1 | Mean = -0.15274629 | Best = -0.02355822
+    ## GA | iter = 2 | Mean = -0.08236591 | Best = -0.01574746
+    ## GA | iter = 3 | Mean = -0.05087595 | Best = -0.01574746
+    ## GA | iter = 4 | Mean = -0.02998482 | Best = -0.01354615
+    ## GA | iter = 5 | Mean = -0.02271251 | Best = -0.01351677
+    ## GA | iter = 6 | Mean = -0.02929527 | Best = -0.01351677
+    ## GA | iter = 7 | Mean = -0.02192971 | Best = -0.01336631
+    ## GA | iter = 8 | Mean = -0.01792654 | Best = -0.01336631
+    ## GA | iter = 9 | Mean = -0.01542625 | Best = -0.01335825
+    ## GA | iter = 10 | Mean = -0.01713931 | Best = -0.01332297
+    ## GA | iter = 11 | Mean = -0.01489054 | Best = -0.01326818
+    ## GA | iter = 12 | Mean = -0.01505641 | Best = -0.01326818
+    ## GA | iter = 13 | Mean = -0.02443523 | Best = -0.01326683
+    ## GA | iter = 14 | Mean = -0.02257862 | Best = -0.01326683
+    ## GA | iter = 15 | Mean = -0.01963603 | Best = -0.01324884
+    ## GA | iter = 16 | Mean = -0.01476678 | Best = -0.01324884
+    ## GA | iter = 17 | Mean = -0.01563511 | Best = -0.01322840
+    ## GA | iter = 18 | Mean = -0.01351686 | Best = -0.01322401
+    ## GA | iter = 19 | Mean = -0.01352950 | Best = -0.01322401
+    ## GA | iter = 20 | Mean = -0.01361481 | Best = -0.01322401
+    ## GA | iter = 21 | Mean = -0.01431348 | Best = -0.01322220
+    ## GA | iter = 22 | Mean = -0.01326986 | Best = -0.01321657
+    ## GA | iter = 23 | Mean = -0.01789521 | Best = -0.01321657
+    ## GA | iter = 24 | Mean = -0.01491495 | Best = -0.01321657
+    ## GA | iter = 25 | Mean = -0.01537907 | Best = -0.01321657
+    ## GA | iter = 26 | Mean = -0.01337347 | Best = -0.01321657
+    ## GA | iter = 27 | Mean = -0.01458093 | Best = -0.01321657
+    ## GA | iter = 28 | Mean = -0.01456897 | Best = -0.01320942
+    ## GA | iter = 29 | Mean = -0.01549594 | Best = -0.01320676
+    ## GA | iter = 30 | Mean = -0.01419072 | Best = -0.01320676
+    ## GA | iter = 31 | Mean = -0.01344281 | Best = -0.01320676
+    ## GA | iter = 32 | Mean = -0.01961260 | Best = -0.01320647
+    ## GA | iter = 33 | Mean = -0.01516043 | Best = -0.01320647
+    ## GA | iter = 34 | Mean = -0.01927162 | Best = -0.01320647
+    ## GA | iter = 35 | Mean = -0.01714049 | Best = -0.01320647
+    ## GA | iter = 36 | Mean = -0.01556114 | Best = -0.01320647
+    ## GA | iter = 37 | Mean = -0.01577394 | Best = -0.01320647
+    ## GA | iter = 38 | Mean = -0.01362020 | Best = -0.01320647
+    ## GA | iter = 39 | Mean = -0.01591790 | Best = -0.01320647
+    ## GA | iter = 40 | Mean = -0.01584879 | Best = -0.01320647
+    ## GA | iter = 41 | Mean = -0.01453642 | Best = -0.01320647
 
     ##    user  system elapsed 
-    ##   0.699   0.087 276.075
+    ##   1.117   0.164 475.112
 
 ``` r
 summary(mod.GA)
@@ -441,37 +460,241 @@ summary(mod.GA)
     ## upper -5 -5 0.55  1 0.65 -1
     ## 
     ## GA results: 
-    ## Iterations             = 24 
-    ## Fitness function value = -0.01323111 
+    ## Iterations             = 41 
+    ## Fitness function value = -0.01320647 
     ## Solution = 
     ##             x1        x2        x3        x4        x5        x6
-    ## [1,] -5.375672 -5.368741 0.4805592 0.2457913 0.5950033 -6.048048
+    ## [1,] -5.371837 -5.336459 0.5026423 0.4747109 0.5961509 -6.589485
 
-# Fitting: Results
+# Fitting: Results and Variance
 
 Output of the fit. The fitted variables use the best fitting guess from
-the genetic algorithm’s last population. The approximate error is the
-standard deviation of that population’s top 50% (taking 50% because the
-randomness of population generation sometimes creates significant
-outliers that don’t affect convergence behavior but would affect the
-standard deviation).
+the genetic algorithm’s last population.
 
-The “fit” variable is the weighted regression parameter. This has no
-physical meaning, but can be useful to know if running multiple
-regressions to check their consistency.
+Within a single cyclic voltammogram, the current at each time point
+cannot be treated as independent, as the closer two point are in time,
+the closer the current measurements will be. This complicates estimates
+of uncertainty, which typically assume indepedent measures. However,
+each voltammogram can be treated as indepedent of other voltammograms
+within the context of the experiment. Therefore, I am using the
+leave-one-out bootstrapping method for calculating the uncertainty by
+finding the best fit to all scan rates but one. Repeating this process
+for all possible sets where a single scan rate is removed will give a
+set of fit parameters whose variance can be treated as a conservative
+estimate for the variance of the best fit when all scan rates are
+included.
+
+To accelerate convergence, the final population from the original
+regression is used as the starting point. This makes it more likely to
+converge rather than reach the computational budget.
 
 With the exception of k0, all values should have an error of less than
 10%. Large perturbations in k0 have a small impact on the fit quality
 above a certain value of k0, so errors are expected to be large.
 
 ``` r
-# Compare fit to the data
-solution = data.frame(DR = 10^mod.GA@population[,1], DO = 10^mod.GA@population[,2], alpha = mod.GA@population[,3],
-                      k0 = 10^mod.GA@population[,4], E0 = mod.GA@population[,5], km = 10^mod.GA@population[,6],
-                      fit = mod.GA@fitness) 
-# Take only the best 50% from the final population pool for the error estimate
-fit.cut = median(mod.GA@fitness)
-solution = filter(solution, abs(fit) < abs(fit.cut))
+uncert.set = data.frame()
+scanrate.set = unique(CV.data.trim$scanrate)
+for(rt in scanrate.set){
+  CV.data.trim.subset = filter(CV.data.trim, scanrate != rt)
+  mod.GA.bootstrap <- ga(type = "real-valued",
+           # Fitness function: weighted sum of squares of error
+           fitness =  function(var){-sum((CV.data.trim.subset$current - (CV.fit.function(voltage = CV.data.trim.subset$voltage, 
+                                                                                             scanrate = CV.data.trim.subset$scanrate, 
+                              # Fit variables and concentration C
+                              logDR = var[1], logDO = var[2], alpha = var[3], logk0 = var[4], E0 = var[5], C = concentration, 
+                              logkm = var[6])))^2*
+                              CV.data.trim.subset$weight1*CV.data.trim.subset$weight2)},
+           # Bounds for each of the varaibles
+           lower = c(-6, -6, 0.45, -1, 0.55, -9), upper = c(-5, -5, 0.55, 1, 0.65, -1), 
+           # Genetic algorithm parameters: population, iteration, and run size (how guesses per group, how many groups)
+           # will output up to <maxiter> times, but will stop early if the best fit stays the same for <run> iterations
+           popSize = 50, maxiter = 50, run = 10, monitor = TRUE,
+           # Start with the best-fitting half of the final population of the full regression.
+           # Including only half ensures some random sampling in case the convergence point is not the same
+           suggestions = mod.GA@population[mod.GA@fitness > median(mod.GA@fitness),],
+           # Parallel computing with 2 cores - speeds up calculation time
+           parallel = 3)
+  # Store results
+  uncert.set = rbind(uncert.set, mod.GA.bootstrap@solution)
+}
+```
+
+    ## GA | iter = 1 | Mean = -0.07402898 | Best = -0.01152673
+    ## GA | iter = 2 | Mean = -0.02958701 | Best = -0.01152528
+    ## GA | iter = 3 | Mean = -0.01758103 | Best = -0.01152528
+    ## GA | iter = 4 | Mean = -0.01415074 | Best = -0.01152528
+    ## GA | iter = 5 | Mean = -0.01470913 | Best = -0.01152528
+    ## GA | iter = 6 | Mean = -0.01625813 | Best = -0.01152528
+    ## GA | iter = 7 | Mean = -0.01332076 | Best = -0.01152528
+    ## GA | iter = 8 | Mean = -0.02489742 | Best = -0.01152528
+    ## GA | iter = 9 | Mean = -0.02054604 | Best = -0.01152528
+    ## GA | iter = 10 | Mean = -0.01325313 | Best = -0.01152528
+    ## GA | iter = 11 | Mean = -0.01371732 | Best = -0.01152528
+    ## GA | iter = 1 | Mean = -0.07844157 | Best = -0.01277750
+    ## GA | iter = 2 | Mean = -0.03356507 | Best = -0.01277261
+    ## GA | iter = 3 | Mean = -0.01974735 | Best = -0.01277261
+    ## GA | iter = 4 | Mean = -0.02135007 | Best = -0.01277261
+    ## GA | iter = 5 | Mean = -0.01732031 | Best = -0.01277261
+    ## GA | iter = 6 | Mean = -0.01893775 | Best = -0.01277261
+    ## GA | iter = 7 | Mean = -0.02093833 | Best = -0.01277261
+    ## GA | iter = 8 | Mean = -0.01524695 | Best = -0.01277261
+    ## GA | iter = 9 | Mean = -0.01367070 | Best = -0.01277261
+    ## GA | iter = 10 | Mean = -0.01309274 | Best = -0.01277031
+    ## GA | iter = 11 | Mean = -0.01459309 | Best = -0.01276364
+    ## GA | iter = 12 | Mean = -0.01372977 | Best = -0.01276359
+    ## GA | iter = 13 | Mean = -0.01448097 | Best = -0.01276308
+    ## GA | iter = 14 | Mean = -0.01782484 | Best = -0.01276308
+    ## GA | iter = 15 | Mean = -0.01552696 | Best = -0.01276308
+    ## GA | iter = 16 | Mean = -0.01403679 | Best = -0.01276308
+    ## GA | iter = 17 | Mean = -0.01493761 | Best = -0.01276308
+    ## GA | iter = 18 | Mean = -0.01695390 | Best = -0.01276308
+    ## GA | iter = 19 | Mean = -0.01315925 | Best = -0.01276308
+    ## GA | iter = 20 | Mean = -0.01542225 | Best = -0.01276308
+    ## GA | iter = 21 | Mean = -0.01690100 | Best = -0.01276308
+    ## GA | iter = 22 | Mean = -0.01528744 | Best = -0.01276308
+    ## GA | iter = 1 | Mean = -0.06623412 | Best = -0.01248116
+    ## GA | iter = 2 | Mean = -0.03702797 | Best = -0.01247827
+    ## GA | iter = 3 | Mean = -0.02372881 | Best = -0.01247827
+    ## GA | iter = 4 | Mean = -0.01847071 | Best = -0.01247827
+    ## GA | iter = 5 | Mean = -0.01836884 | Best = -0.01247827
+    ## GA | iter = 6 | Mean = -0.01719069 | Best = -0.01245615
+    ## GA | iter = 7 | Mean = -0.01986778 | Best = -0.01245615
+    ## GA | iter = 8 | Mean = -0.01574457 | Best = -0.01245615
+    ## GA | iter = 9 | Mean = -0.02384630 | Best = -0.01245615
+    ## GA | iter = 10 | Mean = -0.01690694 | Best = -0.01245615
+    ## GA | iter = 11 | Mean = -0.01345978 | Best = -0.01245615
+    ## GA | iter = 12 | Mean = -0.01325254 | Best = -0.01245517
+    ## GA | iter = 13 | Mean = -0.01606327 | Best = -0.01245517
+    ## GA | iter = 14 | Mean = -0.01366698 | Best = -0.01245517
+    ## GA | iter = 15 | Mean = -0.01368785 | Best = -0.01245517
+    ## GA | iter = 16 | Mean = -0.01534435 | Best = -0.01245517
+    ## GA | iter = 17 | Mean = -0.01718816 | Best = -0.01245517
+    ## GA | iter = 18 | Mean = -0.01417985 | Best = -0.01245517
+    ## GA | iter = 19 | Mean = -0.01588182 | Best = -0.01245517
+    ## GA | iter = 20 | Mean = -0.01391174 | Best = -0.01245517
+    ## GA | iter = 21 | Mean = -0.01568395 | Best = -0.01245517
+    ## GA | iter = 1 | Mean = -0.07131725 | Best = -0.01250993
+    ## GA | iter = 2 | Mean = -0.03234754 | Best = -0.01250844
+    ## GA | iter = 3 | Mean = -0.02205674 | Best = -0.01250844
+    ## GA | iter = 4 | Mean = -0.01827882 | Best = -0.01250844
+    ## GA | iter = 5 | Mean = -0.01666266 | Best = -0.01250844
+    ## GA | iter = 6 | Mean = -0.02003614 | Best = -0.01249881
+    ## GA | iter = 7 | Mean = -0.01494355 | Best = -0.01249371
+    ## GA | iter = 8 | Mean = -0.01567079 | Best = -0.01249371
+    ## GA | iter = 9 | Mean = -0.01465363 | Best = -0.01249371
+    ## GA | iter = 10 | Mean = -0.01826318 | Best = -0.01249371
+    ## GA | iter = 11 | Mean = -0.01559621 | Best = -0.01249371
+    ## GA | iter = 12 | Mean = -0.01404341 | Best = -0.01249371
+    ## GA | iter = 13 | Mean = -0.01729982 | Best = -0.01249371
+    ## GA | iter = 14 | Mean = -0.01352399 | Best = -0.01249371
+    ## GA | iter = 15 | Mean = -0.01487667 | Best = -0.01249371
+    ## GA | iter = 16 | Mean = -0.01284065 | Best = -0.01249355
+    ## GA | iter = 17 | Mean = -0.01467061 | Best = -0.01249355
+    ## GA | iter = 18 | Mean = -0.01347408 | Best = -0.01249355
+    ## GA | iter = 19 | Mean = -0.01469624 | Best = -0.01249355
+    ## GA | iter = 20 | Mean = -0.01303765 | Best = -0.01249355
+    ## GA | iter = 21 | Mean = -0.01292977 | Best = -0.01249355
+    ## GA | iter = 22 | Mean = -0.01315135 | Best = -0.01249348
+    ## GA | iter = 23 | Mean = -0.01572189 | Best = -0.01249348
+    ## GA | iter = 24 | Mean = -0.01734692 | Best = -0.01249348
+    ## GA | iter = 25 | Mean = -0.01341518 | Best = -0.01249348
+    ## GA | iter = 26 | Mean = -0.01297845 | Best = -0.01249348
+    ## GA | iter = 27 | Mean = -0.01656891 | Best = -0.01249348
+    ## GA | iter = 28 | Mean = -0.01885133 | Best = -0.01249348
+    ## GA | iter = 29 | Mean = -0.01432815 | Best = -0.01249062
+    ## GA | iter = 30 | Mean = -0.01433454 | Best = -0.01249062
+    ## GA | iter = 31 | Mean = -0.01764052 | Best = -0.01249062
+    ## GA | iter = 32 | Mean = -0.01492165 | Best = -0.01249062
+    ## GA | iter = 33 | Mean = -0.01805553 | Best = -0.01248937
+    ## GA | iter = 34 | Mean = -0.01319479 | Best = -0.01248937
+    ## GA | iter = 35 | Mean = -0.01780717 | Best = -0.01248574
+    ## GA | iter = 36 | Mean = -0.01420299 | Best = -0.01248574
+    ## GA | iter = 37 | Mean = -0.01281336 | Best = -0.01248574
+    ## GA | iter = 38 | Mean = -0.01315173 | Best = -0.01248574
+    ## GA | iter = 39 | Mean = -0.01268695 | Best = -0.01248574
+    ## GA | iter = 40 | Mean = -0.01397769 | Best = -0.01248574
+    ## GA | iter = 41 | Mean = -0.01278814 | Best = -0.01248574
+    ## GA | iter = 42 | Mean = -0.01255362 | Best = -0.01248574
+    ## GA | iter = 43 | Mean = -0.01319538 | Best = -0.01248574
+    ## GA | iter = 44 | Mean = -0.01394581 | Best = -0.01248574
+    ## GA | iter = 1 | Mean = -0.05235383 | Best = -0.01086694
+    ## GA | iter = 2 | Mean = -0.02063579 | Best = -0.01086426
+    ## GA | iter = 3 | Mean = -0.0151881 | Best = -0.0108427
+    ## GA | iter = 4 | Mean = -0.01332763 | Best = -0.01084270
+    ## GA | iter = 5 | Mean = -0.01285207 | Best = -0.01084270
+    ## GA | iter = 6 | Mean = -0.01335718 | Best = -0.01083545
+    ## GA | iter = 7 | Mean = -0.01155245 | Best = -0.01083399
+    ## GA | iter = 8 | Mean = -0.01169288 | Best = -0.01083399
+    ## GA | iter = 9 | Mean = -0.01442648 | Best = -0.01083374
+    ## GA | iter = 10 | Mean = -0.01129876 | Best = -0.01083374
+    ## GA | iter = 11 | Mean = -0.01373637 | Best = -0.01083374
+    ## GA | iter = 12 | Mean = -0.01124419 | Best = -0.01083374
+    ## GA | iter = 13 | Mean = -0.01548319 | Best = -0.01083130
+    ## GA | iter = 14 | Mean = -0.01283632 | Best = -0.01083130
+    ## GA | iter = 15 | Mean = -0.0113569 | Best = -0.0108313
+    ## GA | iter = 16 | Mean = -0.01146934 | Best = -0.01083130
+    ## GA | iter = 17 | Mean = -0.01096841 | Best = -0.01083130
+    ## GA | iter = 18 | Mean = -0.01115114 | Best = -0.01083130
+    ## GA | iter = 19 | Mean = -0.01189177 | Best = -0.01083130
+    ## GA | iter = 20 | Mean = -0.01087303 | Best = -0.01083130
+    ## GA | iter = 21 | Mean = -0.01085453 | Best = -0.01083130
+    ## GA | iter = 22 | Mean = -0.01085217 | Best = -0.01083130
+    ## GA | iter = 1 | Mean = -0.037144618 | Best = -0.005772304
+    ## GA | iter = 2 | Mean = -0.01315412 | Best = -0.00541489
+    ## GA | iter = 3 | Mean = -0.007440684 | Best = -0.005234793
+    ## GA | iter = 4 | Mean = -0.006298481 | Best = -0.005159746
+    ## GA | iter = 5 | Mean = -0.006089128 | Best = -0.005158864
+    ## GA | iter = 6 | Mean = -0.009289528 | Best = -0.005158864
+    ## GA | iter = 7 | Mean = -0.006484138 | Best = -0.005158864
+    ## GA | iter = 8 | Mean = -0.006732091 | Best = -0.005158864
+    ## GA | iter = 9 | Mean = -0.006428127 | Best = -0.005158864
+    ## GA | iter = 10 | Mean = -0.007062137 | Best = -0.005157112
+    ## GA | iter = 11 | Mean = -0.007009443 | Best = -0.005157112
+    ## GA | iter = 12 | Mean = -0.005435114 | Best = -0.005155876
+    ## GA | iter = 13 | Mean = -0.005467516 | Best = -0.005155876
+    ## GA | iter = 14 | Mean = -0.005389290 | Best = -0.005155876
+    ## GA | iter = 15 | Mean = -0.007690959 | Best = -0.005155876
+    ## GA | iter = 16 | Mean = -0.007659187 | Best = -0.005155876
+    ## GA | iter = 17 | Mean = -0.006518064 | Best = -0.005155876
+    ## GA | iter = 18 | Mean = -0.005309671 | Best = -0.005155643
+    ## GA | iter = 19 | Mean = -0.005543377 | Best = -0.005155643
+    ## GA | iter = 20 | Mean = -0.006328363 | Best = -0.005154657
+    ## GA | iter = 21 | Mean = -0.005563570 | Best = -0.005154657
+    ## GA | iter = 22 | Mean = -0.006068167 | Best = -0.005154657
+    ## GA | iter = 23 | Mean = -0.008236482 | Best = -0.005154657
+    ## GA | iter = 24 | Mean = -0.007360650 | Best = -0.005154657
+    ## GA | iter = 25 | Mean = -0.006406327 | Best = -0.005154657
+    ## GA | iter = 26 | Mean = -0.005853545 | Best = -0.005154657
+    ## GA | iter = 27 | Mean = -0.006214871 | Best = -0.005154657
+    ## GA | iter = 28 | Mean = -0.006123372 | Best = -0.005154657
+    ## GA | iter = 29 | Mean = -0.005273498 | Best = -0.005154657
+
+``` r
+# Adjust results to real values
+names(uncert.set) = c('DR', 'DO', 'alpha', 'k0', 'E0', 'km')
+uncert.set[,c('DR', 'DO', 'k0', 'km')] = 10^uncert.set[,c('DR', 'DO', 'k0', 'km')]
+uncert.set
+```
+
+    ##             DR           DO     alpha       k0        E0           km
+    ## 1 4.250108e-06 4.616504e-06 0.5017460 2.889764 0.5963117 5.344056e-07
+    ## 2 4.201955e-06 4.530630e-06 0.5030712 4.217120 0.5965055 1.821236e-06
+    ## 3 4.173203e-06 4.567032e-06 0.5059540 2.582332 0.5966000 5.433884e-07
+    ## 4 4.220036e-06 4.895514e-06 0.5028794 2.756704 0.5974690 4.879015e-07
+    ## 5 4.147640e-06 4.462885e-06 0.5042182 2.024756 0.5963161 7.962828e-07
+    ## 6 4.543067e-06 5.016069e-06 0.5046571 2.609065 0.5940053 8.413207e-07
+
+``` r
+rm(mod.GA.bootstrap)
+```
+
+``` r
+# Uncertainty results
+solution = data.frame()
+solution = rbind(solution, mod.GA@solution)
+names(solution) = c('DR', 'DO', 'alpha', 'k0', 'E0', 'km')
+solution[,c('DR', 'DO', 'k0', 'km')] = 10^solution[,c('DR', 'DO', 'k0', 'km')]
 
 print("Best Fit")
 ```
@@ -479,35 +702,31 @@ print("Best Fit")
     ## [1] "Best Fit"
 
 ``` r
-apply(filter(solution, fit == max(fit)), 2, mean) # Best fit solution
+as.matrix(solution)
 ```
 
-    ##            DR            DO         alpha            k0            E0 
-    ##  4.210441e-06  4.278184e-06  4.805592e-01  1.761130e+00  5.950033e-01 
-    ##            km           fit 
-    ##  8.952666e-07 -1.323111e-02
+    ##                DR           DO     alpha       k0        E0           km
+    ## [1,] 4.247787e-06 4.608301e-06 0.5026423 2.983396 0.5961509 2.573447e-07
 
 ``` r
-print("Estimated Error")
+print('Uncertainty')
 ```
 
-    ## [1] "Estimated Error"
+    ## [1] "Uncertainty"
 
 ``` r
-apply(solution, 2, sd) # Standard deviation of the best 50% of the population
+apply(uncert.set, 2, sd)
 ```
 
     ##           DR           DO        alpha           k0           E0           km 
-    ## 6.455676e-08 3.136852e-07 4.558432e-03 2.827501e-01 1.315650e-03 1.426883e-07 
-    ##          fit 
-    ## 3.104731e-04
+    ## 1.450887e-07 2.216391e-07 1.492269e-03 7.334789e-01 1.158132e-03 5.039913e-07
 
 # Plotting
 
 Plots of the data against the simulation best fit for comparison. There
 will be some deviation, often due to the assumption that the background
 electrolyte current is the only non-Faradaic component (there will be a
-non-Faradaic contribution from teh redox molecule itself). However, the
+non-Faradaic contribution from the redox molecule itself). However, the
 position and magnitude of the peaks should approximately align with the
 data.
 
@@ -525,4 +744,4 @@ ggplot(CV.data) +
   theme_bw() + scale_linetype_manual(label = c("Fit", "Data"), values = c("fit" = 1, "data" = 2), name = "")
 ```
 
-![](CVFit_Rxn_files/figure-markdown_github/unnamed-chunk-5-1.png)
+![](CVFit_Rxn_files/figure-markdown_github/unnamed-chunk-6-1.png)

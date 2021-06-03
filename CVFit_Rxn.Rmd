@@ -1,7 +1,7 @@
 ---
 title: "Cyclic Voltammetry Fitting: with reaction"
 author: "Jonathan Boualavong"
-output:   
+output:
   md_document:
     variant: markdown_github
 ---
@@ -17,6 +17,7 @@ Changes from the original code:
 * Use of the simulation as an objective function to fit to experimental data
 * Separate diffusion coefficients for oxidized and reduced species. Holding the spatial discretization step constant.
 * Includes reaction for decomposition of oxidized species. If no reaction is desired, the reaction rate can be set to 0.
+* Uncertainty estimation by jackknife, assuming CVs at different scan rates can be treated independently.
 
 # Installation setup 
 You only need to run this section once to download the packages. After that, you can comment it out with # symbols.
@@ -325,31 +326,70 @@ summary(mod.GA)
 
 ```
 
-# Fitting: Results
-Output of the fit. The fitted variables use the best fitting guess from the genetic algorithm's last population. The approximate error is the standard deviation of that population's top 50% (taking 50% because the randomness of population generation sometimes creates significant outliers that don't affect convergence behavior but would affect the standard deviation).
+# Fitting: Results and Variance
+Output of the fit. The fitted variables use the best fitting guess from the genetic algorithm's last population.
 
-The "fit" variable is the weighted regression parameter. This has no physical meaning, but can be useful to know if running multiple regressions to check their consistency.
+Within a single cyclic voltammogram, the current at each time point cannot be treated as independent, as the closer two point are in time, the closer the current measurements will be. 
+This complicates estimates of uncertainty, which typically assume indepedent measures. 
+However, each voltammogram can be treated as indepedent of other voltammograms within the context of the experiment. 
+Therefore, I am using the leave-one-out bootstrapping method for calculating the uncertainty by finding the best fit to all scan rates but one.
+Repeating this process for all possible sets where a single scan rate is removed will give a set of fit parameters whose variance can be treated as a conservative estimate for the variance of the best fit when all scan rates are included.
+
+To accelerate convergence, the final population from the original regression is used as the starting point. This makes it more likely to converge rather than reach the computational budget.
 
 With the exception of k0, all values should have an error of less than 10%. Large perturbations in k0 have a small impact on the fit quality above a certain value of k0, so errors are expected to be large.
 
+
 ```{r}
-# Compare fit to the data
-solution = data.frame(DR = 10^mod.GA@population[,1], DO = 10^mod.GA@population[,2], alpha = mod.GA@population[,3],
-                      k0 = 10^mod.GA@population[,4], E0 = mod.GA@population[,5], km = 10^mod.GA@population[,6],
-                      fit = mod.GA@fitness) 
-# Take only the best 50% from the final population pool for the error estimate
-fit.cut = median(mod.GA@fitness)
-solution = filter(solution, abs(fit) < abs(fit.cut))
+uncert.set = data.frame()
+scanrate.set = unique(CV.data.trim$scanrate)
+for(rt in scanrate.set){
+  CV.data.trim.subset = filter(CV.data.trim, scanrate != rt)
+  mod.GA.bootstrap <- ga(type = "real-valued",
+           # Fitness function: weighted sum of squares of error
+           fitness =  function(var){-sum((CV.data.trim.subset$current - (CV.fit.function(voltage = CV.data.trim.subset$voltage, 
+                                                                                             scanrate = CV.data.trim.subset$scanrate, 
+                              # Fit variables and concentration C
+                              logDR = var[1], logDO = var[2], alpha = var[3], logk0 = var[4], E0 = var[5], C = concentration, 
+                              logkm = var[6])))^2*
+                              CV.data.trim.subset$weight1*CV.data.trim.subset$weight2)},
+           # Bounds for each of the varaibles
+           lower = c(-6, -6, 0.45, -1, 0.55, -9), upper = c(-5, -5, 0.55, 1, 0.65, -1), 
+           # Genetic algorithm parameters: population, iteration, and run size (how guesses per group, how many groups)
+           # will output up to <maxiter> times, but will stop early if the best fit stays the same for <run> iterations
+           popSize = 50, maxiter = 50, run = 10, monitor = TRUE,
+           # Start with the best-fitting half of the final population of the full regression.
+           # Including only half ensures some random sampling in case the convergence point is not the same
+           suggestions = mod.GA@population[mod.GA@fitness > median(mod.GA@fitness),],
+           # Parallel computing with 2 cores - speeds up calculation time
+           parallel = 3)
+  # Store results
+  uncert.set = rbind(uncert.set, mod.GA.bootstrap@solution)
+}
+# Adjust results to real values
+names(uncert.set) = c('DR', 'DO', 'alpha', 'k0', 'E0', 'km')
+uncert.set[,c('DR', 'DO', 'k0', 'km')] = 10^uncert.set[,c('DR', 'DO', 'k0', 'km')]
+uncert.set
+
+rm(mod.GA.bootstrap)
+```
+
+```{r}
+# Uncertainty results
+solution = data.frame()
+solution = rbind(solution, mod.GA@solution)
+names(solution) = c('DR', 'DO', 'alpha', 'k0', 'E0', 'km')
+solution[,c('DR', 'DO', 'k0', 'km')] = 10^solution[,c('DR', 'DO', 'k0', 'km')]
 
 print("Best Fit")
-apply(filter(solution, fit == max(fit)), 2, mean) # Best fit solution
-print("Estimated Error")
-apply(solution, 2, sd) # Standard deviation of the best 50% of the population
+as.matrix(solution)
+print('Uncertainty')
+apply(uncert.set, 2, sd)
 
 ```
 
 # Plotting
-Plots of the data against the simulation best fit for comparison. There will be some deviation, often due to the assumption that the background electrolyte current is the only non-Faradaic component (there will be a non-Faradaic contribution from teh redox molecule itself). However, the position and magnitude of the peaks should approximately align with the data.
+Plots of the data against the simulation best fit for comparison. There will be some deviation, often due to the assumption that the background electrolyte current is the only non-Faradaic component (there will be a non-Faradaic contribution from the redox molecule itself). However, the position and magnitude of the peaks should approximately align with the data.
 
 ```{r}
 # Plotting the fit
