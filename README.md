@@ -8,7 +8,7 @@ The following additional packages are suggested, but not necessary for implement
 ## Citation
 If you are using this methodology in your research, please cite the following publication:
 
-((DOI://))
+Cheng, Y.; Hall, D.; Boualavong, J.; Hickey, R.; Lvov, S.; & Gorski, C.* “Influence of hydrotropes on the solubilities and diffusivities of redox-active organic compounds used in aqueous flow batteries.” ACS Omega 2021, vol. 6, no. 45, 30800-30810. https://doi.org/10.1021/acsomega.1c05133
 
 ## Examples
 An example script (CVFit_Rxn.Rmd) fits the data from TEMPO_1mM_20wtNaPTS.csv as a demonstration of the method.
